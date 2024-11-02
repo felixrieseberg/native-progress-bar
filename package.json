@@ -1,0 +1,17 @@
+{
+  "name": "native-progress-bar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node-gyp build",
+    "full-build": "node-gyp clean && node-gyp configure && node-gyp build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nan": "^2.22.0"
+  }
+}
