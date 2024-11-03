@@ -23,6 +23,11 @@ typedef void (*ButtonCallback)(int buttonIndex);
 - (void)relayoutButtons;
 @end
 
+// Declare default heights
+#define DEFAULT_HEIGHT_WITHOUT_BUTTONS 100
+#define DEFAULT_ADDED_HEIGHT_WITH_BUTTONS 60
+#define DEFAULT_HEIGHT_WITH_BUTTONS (DEFAULT_HEIGHT_WITHOUT_BUTTONS + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS)
+
 @implementation ProgressBarWrapper
 - (void)buttonClicked:(NSButton*)sender {
     NSUInteger index = [self.buttons indexOfObject:sender];
@@ -59,29 +64,52 @@ typedef void (*ButtonCallback)(int buttonIndex);
 }
 
 - (void)relayoutButtons {
+    NSRect frame = self.panel.frame;
+    CGFloat newHeight;
+    CGFloat messageLabelY;
+    CGFloat progressBarY;
+    
     if (self.buttons.count == 0) {
         // Resize window to smaller height if no buttons
-        NSRect frame = self.panel.frame;
-        frame.size.height = 140; // Base height without buttons
-        [self.panel setFrame:frame display:YES animate:YES];
-        return;
+        newHeight = DEFAULT_HEIGHT_WITHOUT_BUTTONS; // Base height without buttons
+        messageLabelY = 90; // Position from bottom
+        progressBarY = 60;  // Position from bottom
+    } else {
+        // Resize window to accommodate buttons
+        newHeight = DEFAULT_HEIGHT_WITH_BUTTONS; // Base height with buttons
+        messageLabelY = 90;// + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS; // Position from bottom
+        progressBarY = 60;// + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS;  // Position from bottom
     }
     
-    // Resize window to accommodate buttons
-    NSRect frame = self.panel.frame;
-    frame.size.height = 180; // Base height with buttons
+    // Update window frame
+    frame.size.height = newHeight;
+    NSRect contentFrame = [[self.panel contentView] frame];
+    contentFrame.size.height = newHeight;
+    [[self.panel contentView] setFrame:contentFrame];
     [self.panel setFrame:frame display:YES animate:YES];
     
-    // Reposition buttons
-    CGFloat buttonWidth = 100;
-    CGFloat buttonHeight = 30;
-    CGFloat buttonSpacing = 10;
-    CGFloat startX = self.panel.frame.size.width - (buttonWidth + 20);
-    CGFloat buttonY = 20;
+    // Update message label position
+    NSRect messageLabelFrame = self.messageLabel.frame;
+    messageLabelFrame.origin.y = messageLabelY;
+    [self.messageLabel setFrame:messageLabelFrame];
     
-    for (NSButton* button in self.buttons) {
-        [button setFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
-        startX -= (buttonWidth + buttonSpacing);
+    // Update progress bar position
+    NSRect progressBarFrame = self.progressBar.frame;
+    progressBarFrame.origin.y = progressBarY;
+    [self.progressBar setFrame:progressBarFrame];
+    
+    if (self.buttons.count > 0) {
+        // Reposition buttons
+        CGFloat buttonWidth = 100;
+        CGFloat buttonHeight = 30;
+        CGFloat buttonSpacing = 10;
+        CGFloat startX = self.panel.frame.size.width - (buttonWidth + 20);
+        CGFloat buttonY = 20;
+        
+        for (NSButton* button in self.buttons) {
+            [button setFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
+            startX -= (buttonWidth + buttonSpacing);
+        }
     }
 }
 @end
@@ -113,7 +141,7 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     }
     
     double width = 400;
-    double height = 100 + (buttonCount * 30) + (buttonCount > 0 ? 10 : 0);
+    double height = (buttonCount > 0) ? DEFAULT_HEIGHT_WITH_BUTTONS : DEFAULT_HEIGHT_WITHOUT_BUTTONS;
 
     NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
                                                styleMask:styleMask

@@ -6,6 +6,10 @@ const activeProgressBars = new Set<ProgressBar>();
 process.on('exit', () => {
   // Attempt to close any remaining progress bars
   for (const progressBar of activeProgressBars) {
+    if (progressBar.isClosed) {
+      continue;
+    }
+
     try {
       progressBar.close();
     } catch (e) {
@@ -84,6 +88,9 @@ export class ProgressBar {
     this._message = args.message || DEFAULT_ARGUMENTS.message;
 
     this.handle = native.showProgressBar(title, this._message, style, this._buttons);
+
+    // Prevent general GC from closing the progress bar
+    activeProgressBars.add(this);
   }
 
   public update(args?: ProgressBarUpdateArguments) {
@@ -101,6 +108,9 @@ export class ProgressBar {
       native.closeProgress(this.handle);
       this.isClosed = true;
       this.handle = null;
+
+      // Allow general GC to close the progress bar
+      activeProgressBars.delete(this);
     }
   }
 
