@@ -34,6 +34,33 @@ struct ProgressBarContext {
 static std::vector<void*> active_handles;
 static std::mutex handles_mutex;
 
+struct ButtonCallbackInfo {
+    napi_env env;
+    napi_ref callback;
+};
+
+std::vector<ButtonCallbackInfo> buttonCallbacks;
+
+void ButtonClickCallback(int buttonIndex) {
+    if (buttonIndex >= 0 && static_cast<size_t>(buttonIndex) < buttonCallbacks.size()) {
+        auto& info = buttonCallbacks[buttonIndex];
+        
+        napi_handle_scope scope;
+        napi_open_handle_scope(info.env, &scope);
+        
+        napi_value callback;
+        napi_get_reference_value(info.env, info.callback, &callback);
+        
+        napi_value global;
+        napi_get_global(info.env, &global);
+        
+        napi_value result;
+        napi_call_function(info.env, global, callback, 0, nullptr, &result);
+        
+        napi_close_handle_scope(info.env, scope);
+    }
+}
+
 static void FinalizeProgressBar(napi_env env, void* finalize_data, void* finalize_hint) {
     ProgressBarContext* context = static_cast<ProgressBarContext*>(finalize_data);
     if (context && context->isValid.exchange(false)) {
@@ -56,11 +83,11 @@ static void CleanupProgressBars(void* arg) {
 }
 
 static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
-    size_t argc = 3;
-    napi_value args[3];
+    size_t argc = 4;
+    napi_value args[4];
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));
 
-    if (argc < 3) {
+    if (argc < 4) {
         napi_throw_error(env, nullptr, "Wrong number of arguments");
         return nullptr;
     }
@@ -80,9 +107,56 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
     char* style = new char[style_size + 1];
     NAPI_CALL(env, napi_get_value_string_utf8(env, args[2], style, style_size + 1, nullptr));
 
+    // Handle buttons array
+    bool isArray;
+    NAPI_CALL(env, napi_is_array(env, args[3], &isArray));
+    
+    std::vector<std::string> buttonLabels;
+    std::vector<const char*> buttonLabelPtrs;
+    buttonCallbacks.clear();
+
+    if (isArray) {
+        uint32_t length;
+        NAPI_CALL(env, napi_get_array_length(env, args[3], &length));
+        
+        for (uint32_t i = 0; i < length; i++) {
+            napi_value buttonObj;
+            NAPI_CALL(env, napi_get_element(env, args[3], i, &buttonObj));
+            
+            // Get label
+            napi_value labelProp;
+            NAPI_CALL(env, napi_get_named_property(env, buttonObj, "label", &labelProp));
+            
+            size_t labelSize;
+            NAPI_CALL(env, napi_get_value_string_utf8(env, labelProp, nullptr, 0, &labelSize));
+            std::string label(labelSize + 1, '\0');
+            NAPI_CALL(env, napi_get_value_string_utf8(env, labelProp, &label[0], label.size(), nullptr));
+            
+            buttonLabels.push_back(label);
+            buttonLabelPtrs.push_back(buttonLabels.back().c_str());
+            
+            // Store callback
+            napi_value clickProp;
+            NAPI_CALL(env, napi_get_named_property(env, buttonObj, "click", &clickProp));
+            
+            napi_ref callbackRef;
+            NAPI_CALL(env, napi_create_reference(env, clickProp, 1, &callbackRef));
+            
+            ButtonCallbackInfo callbackInfo = { env, callbackRef };
+            buttonCallbacks.push_back(callbackInfo);
+        }
+    }
+
     ProgressBarContext* context = new ProgressBarContext();
 #ifdef __APPLE__
-    context->handle = ShowProgressBarMacOS(title, message, style);
+    context->handle = ShowProgressBarMacOS(
+        title, 
+        message, 
+        style, 
+        buttonLabelPtrs.data(), 
+        buttonLabelPtrs.size(), 
+        ButtonClickCallback
+    );
 #endif
     delete[] title;
     delete[] message;

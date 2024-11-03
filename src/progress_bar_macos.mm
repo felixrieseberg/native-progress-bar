@@ -1,17 +1,39 @@
 #import <Cocoa/Cocoa.h>
 #include "progress_bar_macos.h"
 
+typedef void (*ButtonCallback)(int buttonIndex);
+
+@interface ButtonInfo : NSObject
+@property (nonatomic) int index;
+@property (nonatomic) ButtonCallback callback;
+@end
+
+@implementation ButtonInfo
+@end
+
 @interface ProgressBarWrapper : NSObject
 @property NSPanel* panel;
 @property NSProgressIndicator* progressBar;
 @property NSTextField* messageLabel;
+@property NSMutableArray<NSButton*>* buttons;
+@property NSMutableArray<ButtonInfo*>* buttonCallbacks;
 @end
 
 @implementation ProgressBarWrapper
+- (void)buttonClicked:(NSButton*)sender {
+    NSUInteger index = [self.buttons indexOfObject:sender];
+    if (index != NSNotFound && index < self.buttonCallbacks.count) {
+        ButtonInfo* info = self.buttonCallbacks[index];
+        if (info.callback) {
+            info.callback(info.index);
+        }
+    }
+}
 @end
 
 extern "C" __attribute__((visibility("default")))
-void* ShowProgressBarMacOS(const char* title, const char* message, const char* style) {
+void* ShowProgressBarMacOS(const char* title, const char* message, const char* style,
+                          const char** buttonLabels, int buttonCount, ButtonCallback callback) {
     if (title == nullptr) {
         title = "Progress";
     }
@@ -23,6 +45,8 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     }
     
     ProgressBarWrapper* wrapper = [[ProgressBarWrapper alloc] init];
+    wrapper.buttons = [NSMutableArray array];
+    wrapper.buttonCallbacks = [NSMutableArray array];
     
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -39,7 +63,10 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
         styleMask |= NSWindowStyleMaskUtilityWindow;
     }
     
-    NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 400, 100)
+    double width = 400;
+    double height = 100 + (buttonCount * 30) + (buttonCount > 0 ? 10 : 0);
+
+    NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
                                                styleMask:styleMask
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
@@ -53,14 +80,16 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     [panel setLevel:NSFloatingWindowLevel];
     [panel setHidesOnDeactivate:NO];
     
-    NSTextField *messageLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 60, 360, 20)];
+    // Position message label at the top
+    NSTextField *messageLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, height - 40, 360, 20)];
     [messageLabel setStringValue:[NSString stringWithUTF8String:message]];
     [messageLabel setBezeled:NO];
     [messageLabel setDrawsBackground:NO];
     [messageLabel setEditable:NO];
     [messageLabel setSelectable:NO];
     
-    NSProgressIndicator *progressBar = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(20, 20, 360, 20)];
+    // Position progress bar below message
+    NSProgressIndicator *progressBar = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(20, height - 70, 360, 20)];
     [progressBar setIndeterminate:NO];
     [progressBar setMinValue:0.0];
     [progressBar setMaxValue:100.0];
@@ -75,6 +104,33 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     wrapper.panel = panel;
     wrapper.progressBar = progressBar;
     wrapper.messageLabel = messageLabel;
+    
+    // Add buttons if provided
+    if (buttonLabels && buttonCount > 0) {
+        CGFloat buttonWidth = 100;
+        CGFloat buttonHeight = 30;
+        CGFloat buttonSpacing = 10;
+        CGFloat startX = panel.frame.size.width - (buttonWidth + 20);
+        CGFloat buttonY = 20;  // Position buttons at the bottom
+        
+        for (int i = 0; i < buttonCount; i++) {
+            NSString* label = [NSString stringWithUTF8String:buttonLabels[i]];
+            NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
+            [button setTitle:label];
+            [button setBezelStyle:NSBezelStyleRounded];
+            [button setTarget:wrapper];
+            [button setAction:@selector(buttonClicked:)];
+            [[panel contentView] addSubview:button];
+            [wrapper.buttons addObject:button];
+            
+            ButtonInfo* info = [[ButtonInfo alloc] init];
+            info.index = i;
+            info.callback = callback;
+            [wrapper.buttonCallbacks addObject:info];
+            
+            startX -= (buttonWidth + buttonSpacing);
+        }
+    }
     
     return (__bridge_retained void*)wrapper;
 }

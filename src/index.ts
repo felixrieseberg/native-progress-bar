@@ -24,13 +24,20 @@ export interface ProgressBarUpdateArguments {
 export interface ProgressBarArguments extends ProgressBarUpdateArguments {
   title?: string;
   style?: ProgressBarStyle;
-} 
+  buttons?: ProgressBarButtonArguments[];
+}
+
+export interface ProgressBarButtonArguments {
+  label: string;
+  click: () => void;
+}
 
 const DEFAULT_ARGUMENTS: Required<ProgressBarArguments> = {
   title: "Progress",
   message: "",
   style: "default",
-  progress: 0
+  progress: 0,
+  buttons: []
 }
 
 export class ProgressBar {
@@ -64,9 +71,10 @@ export class ProgressBar {
   constructor(args: ProgressBarArguments = DEFAULT_ARGUMENTS) {
     const title = args.title || DEFAULT_ARGUMENTS.title;
     const style = args.style || DEFAULT_ARGUMENTS.style;
+    const buttons = args.buttons || DEFAULT_ARGUMENTS.buttons;
     this._message = args.message || DEFAULT_ARGUMENTS.message;
 
-    this.handle = native.showProgressBar(title, this._message, style);
+    this.handle = native.showProgressBar(title, this._message, style, buttons);
   }
 
   public update(args?: ProgressBarUpdateArguments) {
