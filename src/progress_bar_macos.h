@@ -11,8 +11,8 @@ extern "C" __attribute__((visibility("default")))
 void* ShowProgressBarMacOS(const char* title, const char* message, const char* style, 
                           const char** buttonLabels, int buttonCount, ButtonCallback callback);
 
-extern "C" __attribute__((visibility("default")))
-void UpdateProgressBarMacOS(void* handle, int progress, const char* message);
+void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
+                          const char** buttonLabels, int buttonCount, ButtonCallback callback);
 
 extern "C" __attribute__((visibility("default")))
 void CloseProgressBarMacOS(void* handle);

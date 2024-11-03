@@ -20,11 +20,11 @@ type ProgressBarStyle = 'default' | 'hud' | 'utility';
 export interface ProgressBarUpdateArguments {
   progress?: number;
   message?: string;
+  buttons?: ProgressBarButtonArguments[];
 }
 export interface ProgressBarArguments extends ProgressBarUpdateArguments {
   title?: string;
   style?: ProgressBarStyle;
-  buttons?: ProgressBarButtonArguments[];
 }
 
 export interface ProgressBarButtonArguments {
@@ -68,13 +68,22 @@ export class ProgressBar {
     this.update();
   }
 
+  private _buttons: ProgressBarButtonArguments[] = [];
+  public get buttons() {
+    return this._buttons;
+  }
+  public set buttons(value: ProgressBarButtonArguments[]) {
+    this._buttons = value;
+    this.update();
+  }
+
   constructor(args: ProgressBarArguments = DEFAULT_ARGUMENTS) {
     const title = args.title || DEFAULT_ARGUMENTS.title;
     const style = args.style || DEFAULT_ARGUMENTS.style;
-    const buttons = args.buttons || DEFAULT_ARGUMENTS.buttons;
+    this._buttons = args.buttons || DEFAULT_ARGUMENTS.buttons;
     this._message = args.message || DEFAULT_ARGUMENTS.message;
 
-    this.handle = native.showProgressBar(title, this._message, style, buttons);
+    this.handle = native.showProgressBar(title, this._message, style, this._buttons);
   }
 
   public update(args?: ProgressBarUpdateArguments) {
@@ -82,8 +91,9 @@ export class ProgressBar {
 
     this._progress = args?.progress || this._progress;
     this._message = args?.message || this._message;
-    
-    native.updateProgress(this.handle, this._progress, this._message);
+    this._buttons = args?.buttons || this._buttons;
+
+    native.updateProgress(this.handle, this._progress, this._message, this._buttons);
   }
 
   public close() {

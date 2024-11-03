@@ -17,6 +17,10 @@ typedef void (*ButtonCallback)(int buttonIndex);
 @property NSTextField* messageLabel;
 @property NSMutableArray<NSButton*>* buttons;
 @property NSMutableArray<ButtonInfo*>* buttonCallbacks;
+
+- (void)clearButtons;
+- (void)addButton:(const char*)label index:(int)index callback:(ButtonCallback)callback;
+- (void)relayoutButtons;
 @end
 
 @implementation ProgressBarWrapper
@@ -29,20 +33,65 @@ typedef void (*ButtonCallback)(int buttonIndex);
         }
     }
 }
+
+- (void)clearButtons {
+    for (NSButton* button in self.buttons) {
+        [button removeFromSuperview];
+    }
+    [self.buttons removeAllObjects];
+    [self.buttonCallbacks removeAllObjects];
+}
+
+- (void)addButton:(const char*)label index:(int)index callback:(ButtonCallback)callback {
+    NSString* labelStr = [NSString stringWithUTF8String:label];
+    NSButton* button = [[NSButton alloc] init];
+    [button setTitle:labelStr];
+    [button setBezelStyle:NSBezelStyleRounded];
+    [button setTarget:self];
+    [button setAction:@selector(buttonClicked:)];
+    [[self.panel contentView] addSubview:button];
+    [self.buttons addObject:button];
+    
+    ButtonInfo* info = [[ButtonInfo alloc] init];
+    info.index = index;
+    info.callback = callback;
+    [self.buttonCallbacks addObject:info];
+}
+
+- (void)relayoutButtons {
+    if (self.buttons.count == 0) {
+        // Resize window to smaller height if no buttons
+        NSRect frame = self.panel.frame;
+        frame.size.height = 140; // Base height without buttons
+        [self.panel setFrame:frame display:YES animate:YES];
+        return;
+    }
+    
+    // Resize window to accommodate buttons
+    NSRect frame = self.panel.frame;
+    frame.size.height = 180; // Base height with buttons
+    [self.panel setFrame:frame display:YES animate:YES];
+    
+    // Reposition buttons
+    CGFloat buttonWidth = 100;
+    CGFloat buttonHeight = 30;
+    CGFloat buttonSpacing = 10;
+    CGFloat startX = self.panel.frame.size.width - (buttonWidth + 20);
+    CGFloat buttonY = 20;
+    
+    for (NSButton* button in self.buttons) {
+        [button setFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
+        startX -= (buttonWidth + buttonSpacing);
+    }
+}
 @end
 
 extern "C" __attribute__((visibility("default")))
 void* ShowProgressBarMacOS(const char* title, const char* message, const char* style,
                           const char** buttonLabels, int buttonCount, ButtonCallback callback) {
-    if (title == nullptr) {
-        title = "Progress";
-    }
-    if (message == nullptr) {
-        message = "";
-    }
-    if (style == nullptr) {
-        style = "default";
-    }
+    if (title == nullptr) title = "Progress";
+    if (message == nullptr) message = "";
+    if (style == nullptr) style = "default";
     
     ProgressBarWrapper* wrapper = [[ProgressBarWrapper alloc] init];
     wrapper.buttons = [NSMutableArray array];
@@ -136,7 +185,9 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
 }
 
 extern "C" __attribute__((visibility("default")))
-void UpdateProgressBarMacOS(void* handle, int progress, const char* message) {
+void UpdateProgressBarMacOS(void* handle, double progress, const char* message, 
+                          const char** buttonLabels, int buttonCount, ButtonCallback callback) {
+    
     if (handle == nullptr) {
         return;
     }
@@ -144,28 +195,83 @@ void UpdateProgressBarMacOS(void* handle, int progress, const char* message) {
     @autoreleasepool {
         @try {
             ProgressBarWrapper* wrapper = (__bridge ProgressBarWrapper*)handle;
-            if (wrapper.progressBar) {
-                // Create NSString from message outside the async block
-                NSString* messageStr = nil;
-                if (message != nullptr) {
-                    messageStr = [NSString stringWithUTF8String:message];
+            if (!wrapper) {
+                NSLog(@"Wrapper is null");
+                return;
+            }
+            
+            if (!wrapper.progressBar) {
+                NSLog(@"Progress bar is null");
+                return;
+            }
+            
+            // Create NSString from message outside the async block
+            NSString* messageStr = nil;
+            if (message != nullptr) {
+                messageStr = [NSString stringWithUTF8String:message];
+            }
+            
+            // Verify button data
+            if (buttonCount > 0 && buttonLabels == nullptr) {
+                NSLog(@"Button labels array is null but count is %d", buttonCount);
+                buttonCount = 0;
+            }
+            
+            // Create a local copy of the button data with explicit string copying
+            NSMutableArray* pendingButtons = [NSMutableArray array];
+            for (int i = 0; i < buttonCount; i++) {
+                if (buttonLabels[i] != nullptr) {
+                    // Create an explicit copy of the string
+                    const char* label = strdup(buttonLabels[i]);
+                    NSString* labelStr = [NSString stringWithUTF8String:label];
+                    free((void*)label);
+                    
+                    if (labelStr) {  // Ensure string conversion succeeded
+                        [pendingButtons addObject:@{
+                            @"label": labelStr,
+                            @"index": @(i)
+                        }];
+                    }
+                }
+            }
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [wrapper.progressBar setDoubleValue:progress];
+                
+                if (messageStr != nil && wrapper.messageLabel != nil) {
+                    [wrapper.messageLabel setStringValue:messageStr];
                 }
                 
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [wrapper.progressBar setDoubleValue:progress];
-                    
-                    // Update message if we have one
-                    if (messageStr != nil && wrapper.messageLabel != nil) {
-                        [wrapper.messageLabel setStringValue:messageStr];
+                [wrapper clearButtons];
+                
+                if (pendingButtons.count > 0) {
+                    for (NSDictionary* buttonData in pendingButtons) {
+                        NSString* label = buttonData[@"label"];
+                        NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 30)];
+                        [button setTitle:label];
+                        [button setBezelStyle:NSBezelStyleRounded];
+                        [button setTarget:wrapper];
+                        [button setAction:@selector(buttonClicked:)];
+                        [[wrapper.panel contentView] addSubview:button];
+                        [wrapper.buttons addObject:button];
+                        
+                        ButtonInfo* info = [[ButtonInfo alloc] init];
+                        info.index = [buttonData[@"index"] intValue];
+                        info.callback = callback;
+                        [wrapper.buttonCallbacks addObject:info];
                     }
-                    
-                    if (progress >= 100) {
-                        CloseProgressBarMacOS(handle);
-                    }
-                });
-            }
+                }
+                
+                [wrapper relayoutButtons];
+                
+                if (progress >= 100) {
+                    NSLog(@"Progress complete, closing window");
+                    CloseProgressBarMacOS(handle);
+                }
+            });
         } @catch (NSException *exception) {
             NSLog(@"Exception in UpdateProgressBarMacOS: %@", exception);
+            NSLog(@"Exception reason: %@", [exception reason]);
         }
     }
 }
@@ -188,7 +294,8 @@ void CloseProgressBarMacOS(void* handle) {
                 });
             }
         } @catch (NSException *exception) {
-            // Log or handle the exception if needed
+            NSLog(@"Exception in CloseProgressBarMacOS: %@", exception);
+            NSLog(@"Exception reason: %@", [exception reason]);
         }
     }
 }
