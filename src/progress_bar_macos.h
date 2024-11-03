@@ -10,7 +10,7 @@ extern "C" __attribute__((visibility("default")))
 void* ShowProgressBarMacOS(const char* title, const char* message, const char* style);
 
 extern "C" __attribute__((visibility("default")))
-void UpdateProgressBarMacOS(void* handle, int progress);
+void UpdateProgressBarMacOS(void* handle, int progress, const char* message);
 
 extern "C" __attribute__((visibility("default")))
 void CloseProgressBarMacOS(void* handle);

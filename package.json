@@ -3,15 +3,26 @@
   "version": "1.0.0",
   "description": "",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node-gyp build",
-    "full-build": "node-gyp clean && node-gyp configure && node-gyp build"
+    "build": "npm run build-ts && npm run build-native",
+    "build-ts": "tsc",
+    "build-native": "node-gyp build",
+    "build-native-clean": "node-gyp clean && node-gyp configure && node-gyp build"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "email": "felix@felixrieseberg.com",
+    "name": "Felix Rieseberg",
+    "url": "http://www.felixrieseberg.com"
+  },
+  "license": "MIT",
   "dependencies": {
     "nan": "^2.22.0"
+  },
+  "devDependencies": {
+    "@types/bindings": "^1.5.5",
+    "typescript": "^5.6.3"
   }
 }

@@ -105,8 +105,8 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
 }
 
 static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
-    size_t argc = 2;
-    napi_value args[2];
+    size_t argc = 3;
+    napi_value args[3];
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));
 
     if (argc < 2) {
@@ -125,9 +125,25 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
     int32_t progress;
     NAPI_CALL(env, napi_get_value_int32(env, args[1], &progress));
 
-#ifdef __APPLE__
-    UpdateProgressBarMacOS(context->handle, progress);
-#endif
+    if (argc >= 3) {
+        napi_valuetype value_type;
+        NAPI_CALL(env, napi_typeof(env, args[2], &value_type));
+        
+        if (value_type == napi_string) {
+            size_t message_length;
+            NAPI_CALL(env, napi_get_value_string_utf8(env, args[2], nullptr, 0, &message_length));
+            char* message_buffer = new char[message_length + 1];
+            NAPI_CALL(env, napi_get_value_string_utf8(env, args[2], message_buffer, message_length + 1, nullptr));
+            
+            UpdateProgressBarMacOS(context->handle, progress, message_buffer);
+            
+            delete[] message_buffer;
+        } else {
+            UpdateProgressBarMacOS(context->handle, progress, nullptr);
+        }
+    } else {
+        UpdateProgressBarMacOS(context->handle, progress, nullptr);
+    }
 
     return nullptr;
 }

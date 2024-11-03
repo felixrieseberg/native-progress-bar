@@ -4,6 +4,7 @@
 @interface ProgressBarWrapper : NSObject
 @property NSPanel* panel;
 @property NSProgressIndicator* progressBar;
+@property NSTextField* messageLabel;
 @end
 
 @implementation ProgressBarWrapper
@@ -73,12 +74,13 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     
     wrapper.panel = panel;
     wrapper.progressBar = progressBar;
+    wrapper.messageLabel = messageLabel;
     
     return (__bridge_retained void*)wrapper;
 }
 
 extern "C" __attribute__((visibility("default")))
-void UpdateProgressBarMacOS(void* handle, int progress) {
+void UpdateProgressBarMacOS(void* handle, int progress, const char* message) {
     if (handle == nullptr) {
         return;
     }
@@ -87,8 +89,19 @@ void UpdateProgressBarMacOS(void* handle, int progress) {
         @try {
             ProgressBarWrapper* wrapper = (__bridge ProgressBarWrapper*)handle;
             if (wrapper.progressBar) {
+                // Create NSString from message outside the async block
+                NSString* messageStr = nil;
+                if (message != nullptr) {
+                    messageStr = [NSString stringWithUTF8String:message];
+                }
+                
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [wrapper.progressBar setDoubleValue:progress];
+                    
+                    // Update message if we have one
+                    if (messageStr != nil && wrapper.messageLabel != nil) {
+                        [wrapper.messageLabel setStringValue:messageStr];
+                    }
                     
                     if (progress >= 100) {
                         CloseProgressBarMacOS(handle);
@@ -96,7 +109,7 @@ void UpdateProgressBarMacOS(void* handle, int progress) {
                 });
             }
         } @catch (NSException *exception) {
-            // Log or handle the exception if needed
+            NSLog(@"Exception in UpdateProgressBarMacOS: %@", exception);
         }
     }
 }
@@ -115,6 +128,7 @@ void CloseProgressBarMacOS(void* handle) {
                     [wrapper.panel close];
                     wrapper.panel = nil;
                     wrapper.progressBar = nil;
+                    wrapper.messageLabel = nil;
                 });
             }
         } @catch (NSException *exception) {
