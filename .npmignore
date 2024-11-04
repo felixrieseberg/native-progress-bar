@@ -1,0 +1,8 @@
+.vscode
+bin
+build
+docs
+screenshots
+test
+src/*.ts
+tsconfig.json
