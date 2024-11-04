@@ -96,7 +96,7 @@ export class ProgressBar {
   }
   public set buttons(value: ProgressBarButtonArguments[]) {
     this._buttons = value;
-    this.update();
+    this.update({ buttons: value });
   }
   private _buttons: ProgressBarButtonArguments[] = [];
   private _internalButtons: InternalProgressBarButtonArguments[] = [];

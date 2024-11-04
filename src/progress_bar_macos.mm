@@ -65,7 +65,9 @@ typedef void (*ButtonCallback)(int buttonIndex);
 }
 
 - (void)relayoutButtons {
-    NSRect frame = self.panel.frame;
+    // Get the current window frame in screen coordinates
+    NSRect screenFrame = [self.panel frame];
+    
     CGFloat newHeight;
     CGFloat messageLabelY;
     CGFloat progressBarY;
@@ -74,30 +76,31 @@ typedef void (*ButtonCallback)(int buttonIndex);
         // Resize window to smaller height if no buttons
         newHeight = DEFAULT_HEIGHT_WITHOUT_BUTTONS;
         messageLabelY = newHeight - 40;
-        progressBarY = newHeight - 40; 
+        progressBarY = newHeight - 70;
     } else {
         // Resize window to accommodate buttons
         newHeight = DEFAULT_HEIGHT_WITH_BUTTONS;
         messageLabelY = newHeight - 40;
-        progressBarY = newHeight - 40; 
+        progressBarY = newHeight - 70;
     }
     
+    // Calculate new window frame while maintaining screen position
+    NSRect newFrame = screenFrame;
+    newFrame.origin.y = NSMaxY(screenFrame) - newHeight; // Keep top edge in same place
+    newFrame.size.height = newHeight + 30;
+    
     // Update window frame
-    // frame.size.height = newHeight;
-    NSRect contentFrame = [[self.panel contentView] frame];
-    contentFrame.size.height = newHeight;
-    [[self.panel contentView] setFrame:contentFrame];
-    [self.panel setFrame:frame display:YES animate:YES];
+    [self.panel setFrame:newFrame display:YES animate:YES];
     
     // Update message label position
-    // NSRect messageLabelFrame = self.messageLabel.frame;
-    // messageLabelFrame.origin.y = messageLabelY;
-    // [self.messageLabel setFrame:messageLabelFrame];
+    NSRect messageLabelFrame = self.messageLabel.frame;
+    messageLabelFrame.origin.y = messageLabelY;
+    [self.messageLabel setFrame:messageLabelFrame];
     
     // Update progress bar position
-    // NSRect progressBarFrame = self.progressBar.frame;
-    // progressBarFrame.origin.y = progressBarY;
-    // [self.progressBar setFrame:progressBarFrame];
+    NSRect progressBarFrame = self.progressBar.frame;
+    progressBarFrame.origin.y = progressBarY;
+    [self.progressBar setFrame:progressBarFrame];
     
     if (self.buttons.count > 0) {
         // Reposition buttons

@@ -105,7 +105,7 @@ function createProgressBarWithAppearingButton() {
     }
 
     progressBar.progress += 1;
-  }, 400);
+  }, 200);
 
   PROGRESS_BARS.push(progressBar);
 }
