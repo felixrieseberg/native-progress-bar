@@ -7,7 +7,8 @@
 #include "progress_bar_windows.h"
 
 #define DEFAULT_WINDOW_WIDTH 1035
-#define DEFAULT_WINDOW_HEIGHT 400
+#define DEFAULT_WINDOW_HEIGHT 250
+#define DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS 360
 
 // Add DPI awareness helper
 int GetWindowDpiHelper(HWND hwnd) {
@@ -36,11 +37,29 @@ int ScaleForDpi(int value, int dpi) {
 // Window class name
 const wchar_t* WINDOW_CLASS_NAME = L"ProgressBarWindow";
 
+// Window procedure to handle button clicks and prevent closing
+LRESULT CALLBACK ProgressBarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_CLOSE) {
+        return 0;  // Ignore close request
+    }
+    else if (msg == WM_COMMAND) {
+        // Handle button clicks
+        int buttonId = LOWORD(wParam);
+        if (buttonId >= 1) {  // Our buttons start from ID 1
+            void (*callback)(int) = (void (*)(int))GetWindowLongPtr(hwnd, GWLP_USERDATA);
+            if (callback) {
+                callback(buttonId - 1);  // Convert back to 0-based index
+            }
+        }
+    }
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
 // Register the window class
 bool RegisterProgressBarWindowClass() {
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
-    wc.lpfnWndProc = DefWindowProcW;
+    wc.lpfnWndProc = ProgressBarWndProc;  // Use our window procedure
     wc.hInstance = GetModuleHandle(NULL);
     wc.lpszClassName = WINDOW_CLASS_NAME;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -52,7 +71,7 @@ bool RegisterProgressBarWindowClass() {
 void* ShowProgressBarWindows(
     const char* title,
     const char* message,
-    const char* windowStyle,
+    const char* style,
     const char** buttonLabels,
     size_t buttonCount,
     void (*callback)(int)) {
@@ -70,14 +89,26 @@ void* ShowProgressBarWindows(
     std::wstring wTitle(title, title + strlen(title));
     std::wstring wMessage(message, message + strlen(message));
     
+    // Get screen dimensions
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    // Calculate window dimensions
+    int windowWidth = DEFAULT_WINDOW_WIDTH;
+    int windowHeight = buttonCount == 0 ? DEFAULT_WINDOW_HEIGHT : DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS;  // Taller if we have buttons
+    
+    // Calculate center position
+    int windowX = (screenWidth - windowWidth) / 2;
+    int windowY = (screenHeight - windowHeight) / 2;
+
     // Create the window using our custom window class
     HWND hwnd = CreateWindowExW(
-        0,
-        WINDOW_CLASS_NAME,  // Use our custom window class
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        WINDOW_CLASS_NAME,
         wTitle.c_str(),
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT,
+        WS_POPUP | WS_CAPTION | WS_VISIBLE,
+        windowX, windowY,  // Centered position
+        windowWidth, windowHeight,
         NULL,
         NULL,
         GetModuleHandle(NULL),
@@ -168,8 +199,14 @@ void* ShowProgressBarWindows(
     // Create buttons if provided
     int buttonWidth = ScaleForDpi(100, dpi);
     int buttonHeight = ScaleForDpi(32, dpi);
-    int buttonSpacing = ScaleForDpi(20, dpi);
+    int buttonSpacing = ScaleForDpi(10, dpi);  // Reduced spacing between buttons
     int buttonY = ScaleForDpi(100, dpi);
+
+    // Calculate total width needed for all buttons
+    int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
+    
+    // Start position for the first button (from right side)
+    int startX = ScaleForDpi(470, dpi) - totalButtonWidth;  // 470 is window width (500) minus margin (30)
 
     for (size_t i = 0; i < buttonCount; i++) {
         std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
@@ -178,7 +215,7 @@ void* ShowProgressBarWindows(
             L"BUTTON",
             wButtonLabel.c_str(),
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-            ScaleForDpi(30, dpi) + (i * (buttonWidth + buttonSpacing)),
+            startX + (i * (buttonWidth + buttonSpacing)),  // Position from right to left
             buttonY,
             buttonWidth,
             buttonHeight,
@@ -245,8 +282,14 @@ void UpdateProgressBarWindows(
         // Create new buttons with DPI scaling
         int buttonWidth = ScaleForDpi(100, dpi);
         int buttonHeight = ScaleForDpi(32, dpi);
-        int buttonSpacing = ScaleForDpi(20, dpi);
+        int buttonSpacing = ScaleForDpi(10, dpi);  // Reduced spacing between buttons
         int buttonY = ScaleForDpi(100, dpi);
+
+        // Calculate total width needed for all buttons
+        int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
+        
+        // Start position for the first button (from right side)
+        int startX = ScaleForDpi(470, dpi) - totalButtonWidth;  // 470 is window width (500) minus margin (30)
 
         for (size_t i = 0; i < buttonCount; i++) {
             std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
@@ -255,7 +298,7 @@ void UpdateProgressBarWindows(
                 L"BUTTON",
                 wButtonLabel.c_str(),
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                ScaleForDpi(30, dpi) + (i * (buttonWidth + buttonSpacing)),
+                startX + (i * (buttonWidth + buttonSpacing)),
                 buttonY,
                 buttonWidth,
                 buttonHeight,
