@@ -159,7 +159,7 @@ function createProgressBarWithMultipleButtons() {
   progressBar = new ProgressBar({
     title: "Hi!",
     message: "Deleting all kinds of files!",
-    style: "default",
+    style: "hud",
     progress: 10,
     buttons: [getDefaultCancelButton(), {
       label: "Done",
