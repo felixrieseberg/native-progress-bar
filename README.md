@@ -1,6 +1,7 @@
 # native-progress-bar
 
 This module allows your Electron app to display native dialogs with progress bars in them on Windows and macOS.
+It has no dependencies other than `binding` and creates a ~85KB Node addon.
 
 To see various examples for progress bars, check out `test/src/progress-bars.js`.
 

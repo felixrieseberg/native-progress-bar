@@ -2,7 +2,6 @@
   "targets": [
     {
       "target_name": "progress_bar",
-      "include_dirs": ["<!(node -e \"require('nan')\")"],
       "conditions": [
         ['OS=="mac"', {
           "sources": [ 
