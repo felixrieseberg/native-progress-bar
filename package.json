@@ -9,7 +9,8 @@
     "build-ts": "tsc",
     "build-native": "node-gyp clean && node-gyp configure && node-gyp build",
     "test": "cd test && npm run start && cd -",
-    "prettier": "npx prettier --write ."
+    "prettier": "npx prettier --write .",
+    "prepack": "npm run build-ts"
   },
   "keywords": [
     "progress",
