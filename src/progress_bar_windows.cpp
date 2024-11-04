@@ -260,7 +260,7 @@ void UpdateProgressBarWindows(
     }
 
     if (message) {
-        // Find the message static control (first STATIC child window)
+        // Find the message static control
         HWND hMessage = FindWindowExW(hwnd, NULL, L"STATIC", NULL);
         if (hMessage) {
             std::wstring wMessage(message, message + strlen(message));
@@ -270,51 +270,68 @@ void UpdateProgressBarWindows(
 
     if (updateButtons) {
         // Remove existing buttons
-        EnumChildWindows(hwnd, [](HWND hChild, LPARAM) -> BOOL {
-            wchar_t className[256];
-            GetClassNameW(hChild, className, sizeof(className)/sizeof(wchar_t));
-            if (wcscmp(className, L"BUTTON") == 0) {
-                DestroyWindow(hChild);
-            }
-            return TRUE;
-        }, 0);
-
-        // Create new buttons with DPI scaling
-        int buttonWidth = ScaleForDpi(100, dpi);
-        int buttonHeight = ScaleForDpi(32, dpi);
-        int buttonSpacing = ScaleForDpi(10, dpi);  // Reduced spacing between buttons
-        int buttonY = ScaleForDpi(100, dpi);
-
-        // Calculate total width needed for all buttons
-        int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
-        
-        // Start position for the first button (from right side)
-        int startX = ScaleForDpi(470, dpi) - totalButtonWidth;  // 470 is window width (500) minus margin (30)
-
-        for (size_t i = 0; i < buttonCount; i++) {
-            std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
-            HWND hButton = CreateWindowExW(
-                0,
-                L"BUTTON",
-                wButtonLabel.c_str(),
-                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                startX + (i * (buttonWidth + buttonSpacing)),
-                buttonY,
-                buttonWidth,
-                buttonHeight,
-                hwnd,
-                (HMENU)(i + 1),
-                GetModuleHandle(NULL),
-                NULL
-            );
-
-            // Set button font
-            HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-            SendMessage(hButton, WM_SETFONT, (WPARAM)hFont, TRUE);
+        HWND hButton = NULL;
+        while ((hButton = FindWindowExW(hwnd, hButton, L"BUTTON", NULL)) != NULL) {
+            DestroyWindow(hButton);
         }
 
-        // Store new callback
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)callback);
+        // Get screen dimensions for centering
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        
+        // Calculate new window size
+        int windowWidth = DEFAULT_WINDOW_WIDTH;
+        int windowHeight = buttonCount == 0 ? DEFAULT_WINDOW_HEIGHT : DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS;
+        
+        // Calculate new center position
+        int windowX = (screenWidth - windowWidth) / 2;
+        int windowY = (screenHeight - windowHeight) / 2;
+
+        // Resize and reposition window
+        SetWindowPos(hwnd, NULL, 
+            windowX, windowY, windowWidth, windowHeight,
+            SWP_NOZORDER);
+
+        if (buttonCount > 0) {
+            // Create new buttons with DPI scaling
+            int buttonWidth = ScaleForDpi(100, dpi);
+            int buttonHeight = ScaleForDpi(32, dpi);
+            int buttonSpacing = ScaleForDpi(10, dpi);
+            int buttonY = ScaleForDpi(100, dpi);
+
+            // Calculate total width needed for all buttons
+            int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
+            int startX = ScaleForDpi(470, dpi) - totalButtonWidth;
+
+            for (size_t i = 0; i < buttonCount; i++) {
+                std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
+                HWND hNewButton = CreateWindowExW(
+                    0,
+                    L"BUTTON",
+                    wButtonLabel.c_str(),
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    startX + (i * (buttonWidth + buttonSpacing)),
+                    buttonY,
+                    buttonWidth,
+                    buttonHeight,
+                    hwnd,
+                    (HMENU)(i + 1),
+                    GetModuleHandle(NULL),
+                    NULL
+                );
+
+                // Set button font
+                HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+                SendMessage(hNewButton, WM_SETFONT, (WPARAM)hFont, TRUE);
+            }
+
+            // Store new callback
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)callback);
+
+            // Force window to redraw
+            InvalidateRect(hwnd, NULL, TRUE);
+            UpdateWindow(hwnd);
+        }
     }
 }
 
