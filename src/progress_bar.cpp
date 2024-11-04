@@ -241,6 +241,9 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
             uint32_t length;
             NAPI_CALL(env, napi_get_array_length(env, args[4], &length));
             
+            // Clear existing callbacks when updating buttons
+            buttonCallbacks.clear();
+            
             for (uint32_t i = 0; i < length; i++) {
                 napi_value buttonObj;
                 NAPI_CALL(env, napi_get_element(env, args[4], i, &buttonObj));
@@ -261,6 +264,7 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
                 napi_value clickProp;
                 NAPI_CALL(env, napi_get_named_property(env, buttonObj, "click", &clickProp));
                 
+                // Create a new reference for each callback
                 napi_ref callbackRef;
                 NAPI_CALL(env, napi_create_reference(env, clickProp, 1, &callbackRef));
                 
