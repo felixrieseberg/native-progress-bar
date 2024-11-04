@@ -12,15 +12,17 @@ function getDefaultInterval(progressBar) {
 
     if (progressBar.progress >= 100) {
       clearInterval(interval);
-      
+
       // You can dynamically change buttons
-      progressBar.buttons = [{
-        label: "Done",
-        click: (progressBar) => {
-          console.log("Done button clicked");
-          progressBar.close();
-        }
-      }]
+      progressBar.buttons = [
+        {
+          label: "Done",
+          click: (progressBar) => {
+            console.log("Done button clicked");
+            progressBar.close();
+          },
+        },
+      ];
 
       return;
     }
@@ -161,13 +163,16 @@ function createProgressBarWithMultipleButtons() {
     message: "Deleting all kinds of files!",
     style: "hud",
     progress: 10,
-    buttons: [getDefaultCancelButton(), {
-      label: "Done",
-      click: (progressBar) => {
-        console.log("Done button clicked");
-        progressBar.close();
+    buttons: [
+      getDefaultCancelButton(),
+      {
+        label: "Done",
+        click: (progressBar) => {
+          console.log("Done button clicked");
+          progressBar.close();
+        },
       },
-    }],
+    ],
   });
 
   interval = getDefaultInterval(progressBar);

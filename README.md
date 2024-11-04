@@ -2,7 +2,7 @@
 
 This module allows your Electron app to display native dialogs with progress bars in them on Windows and macOS.
 
-To see various examples for progress bars, check out `test/src/progress-bars.js`. 
+To see various examples for progress bars, check out `test/src/progress-bars.js`.
 
 ## Screenshots
 
