@@ -3,6 +3,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <cstring>
 
 #define NAPI_CALL(env, call)                                                   \
   do {                                                                         \
@@ -129,6 +130,10 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
         uint32_t length;
         NAPI_CALL(env, napi_get_array_length(env, args[3], &length));
         
+        // Pre-allocate to prevent reallocations
+        buttonLabels.reserve(length);
+        buttonLabelPtrs.reserve(length);
+        
         for (uint32_t i = 0; i < length; i++) {
             napi_value buttonObj;
             NAPI_CALL(env, napi_get_element(env, args[3], i, &buttonObj));
@@ -142,8 +147,10 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
             std::string label(labelSize + 1, '\0');
             NAPI_CALL(env, napi_get_value_string_utf8(env, labelProp, &label[0], label.size(), nullptr));
             
+            // Store string in buttonLabels
             buttonLabels.push_back(label);
-            buttonLabelPtrs.push_back(buttonLabels.back().c_str());
+            // Create a persistent copy of the string
+            buttonLabelPtrs.push_back(strdup(label.c_str()));
             
             // Store callback
             napi_value clickProp;
@@ -193,6 +200,10 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
     {
         std::lock_guard<std::mutex> lock(handles_mutex);
         active_handles.push_back(context->handle);
+    }
+
+    for (const char* ptr : buttonLabelPtrs) {
+        free((void*)ptr);
     }
 
     return external;

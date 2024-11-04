@@ -110,7 +110,6 @@ typedef void (*ButtonCallback)(int buttonIndex);
         CGFloat buttonY = 20;
         
         // Calculate total width needed for all buttons
-        CGFloat totalWidth = (buttonWidth * self.buttons.count) + (buttonSpacing * (self.buttons.count - 1));
         CGFloat startX = self.panel.frame.size.width - 20 - buttonWidth;
         
         for (NSButton* button in self.buttons) {
@@ -198,7 +197,21 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
         CGFloat buttonY = 20;  // Position buttons at the bottom
         
         for (int i = 0; i < buttonCount; i++) {
-            NSString* label = [NSString stringWithUTF8String:buttonLabels[i]];
+            if (!buttonLabels[i]) {
+                NSLog(@"Warning: Button label at index %d is null", i);
+                continue;
+            }
+            
+            // Create an NSString using UTF8 encoding explicitly
+            NSString* label = [[NSString alloc] initWithBytes:buttonLabels[i] 
+                                                     length:strlen(buttonLabels[i]) 
+                                                   encoding:NSUTF8StringEncoding];
+            
+            if (!label) {
+                NSLog(@"Warning: Failed to create NSString from button label at index %d", i);
+                continue;
+            }
+            
             NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
             [button setTitle:label];
             [button setBezelStyle:NSBezelStyleRounded];
@@ -290,24 +303,30 @@ void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
                     
                     if (pendingButtons.count > 0) {
                         CGFloat buttonWidth = 100;
-                        CGFloat buttonHeight = 30;
                         CGFloat buttonSpacing = 10;
                         CGFloat startX = wrapper.panel.frame.size.width - (buttonWidth + 20);
                         CGFloat buttonY = 20;
                         
                         for (NSDictionary* buttonData in pendingButtons) {
                             NSString* label = buttonData[@"label"];
-                            // Create button with correct initial position
-                            NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
+                            NSNumber* index = buttonData[@"index"];
+                            
+                            NSButton* button = [[NSButton alloc] init];
                             [button setTitle:label];
                             [button setBezelStyle:NSBezelStyleRounded];
+                            [button sizeToFit];
+                            
+                            CGFloat buttonWidth = button.frame.size.width + 20;
+                            CGFloat buttonHeight = button.frame.size.height;
+                            
+                            [button setFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
                             [button setTarget:wrapper];
                             [button setAction:@selector(buttonClicked:)];
                             [[wrapper.panel contentView] addSubview:button];
                             [wrapper.buttons addObject:button];
                             
                             ButtonInfo* info = [[ButtonInfo alloc] init];
-                            info.index = [buttonData[@"index"] intValue];
+                            info.index = [index intValue];
                             info.callback = callback;
                             [wrapper.buttonCallbacks addObject:info];
                             
