@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test Bed!</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <h1>💖 Hello World!</h1>
+    <button id="create-simple-progress-bar">Create Simple Progress Bar</button>
+    <button id="create-progress-bar-with-button">
+      Create Progress Bar With Button
+    </button>
+    <button id="create-progress-bar-with-appearing-button">
+      Create Progress Bar With Appearing Button
+    </button>
+    <script>
+      document
+        .getElementById("create-simple-progress-bar")
+        .addEventListener("click", () => {
+          window.native.createProgressBar("simple");
+        });
+      document
+        .getElementById("create-progress-bar-with-button")
+        .addEventListener("click", () => {
+          window.native.createProgressBar("button");
+        });
+      document
+        .getElementById("create-progress-bar-with-appearing-button")
+        .addEventListener("click", () => {
+          window.native.createProgressBar("appearing-button");
+        });
+    </script>
+  </body>
+</html>
