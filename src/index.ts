@@ -67,6 +67,10 @@ export class ProgressBar {
     return this._progress;
   }
   public set progress(value: number) {
+    if (value === this._progress) {
+      return;
+    }
+
     if (value < 0 || value > 100) {
       throw new Error("Progress must be between 0 and 100");
     }
@@ -83,6 +87,10 @@ export class ProgressBar {
     return this._message;
   }
   public set message(value: string) {
+    if (value === this._message) {
+      return;
+    }
+
     this._message = value;
     this.update();
   }
@@ -95,6 +103,10 @@ export class ProgressBar {
     return this._buttons;
   }
   public set buttons(value: ProgressBarButtonArguments[]) {
+    if (value === this._buttons) {
+      return;
+    }
+
     this._buttons = value;
     this.update({ buttons: value });
   }
