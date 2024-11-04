@@ -1,7 +1,7 @@
 {
   "name": "native-progress-bar",
   "version": "1.0.0",
-  "description": "",
+  "description": "This module allows your Electron app to display native dialogs with progress bars in them on Windows and macOS.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -23,6 +23,10 @@
     "win32",
     "electron"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/felixrieseberg/native-progress-bar.git"
+  },
   "author": {
     "email": "felix@felixrieseberg.com",
     "name": "Felix Rieseberg",
