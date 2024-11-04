@@ -49,6 +49,9 @@ function createProgressBar(type) {
     case "appearing-button":
       createProgressBarWithAppearingButton();
       break;
+    case "disappearing-button":
+      createProgressBarWithDisappearingButton();
+      break;
   }
 }
 
@@ -102,6 +105,31 @@ function createProgressBarWithAppearingButton() {
   interval = setInterval(() => {
     if (progressBar.progress === 10) {
       progressBar.buttons = [getDefaultCancelButton()];
+    }
+
+    progressBar.progress += 1;
+  }, 200);
+
+  PROGRESS_BARS.push(progressBar);
+}
+
+function createProgressBarWithDisappearingButton() {
+  let progressBar, interval;
+
+  progressBar = new ProgressBar({
+    title: "Hi!",
+    message: "Deleting all kinds of files!",
+    style: "default",
+    progress: 10,
+    onClose: () => {
+      clearInterval(interval);
+    },
+    buttons: [getDefaultCancelButton()],
+  });
+
+  interval = setInterval(() => {
+    if (progressBar.progress === 10) {
+      progressBar.buttons = [];
     }
 
     progressBar.progress += 1;

@@ -14,6 +14,9 @@
     <button id="create-progress-bar-with-appearing-button">
       Create Progress Bar With Appearing Button
     </button>
+    <button id="create-progress-bar-with-disappearing-button">
+      Create Progress Bar With Disappearing Button
+    </button>
     <script>
       document
         .getElementById("create-simple-progress-bar")
@@ -29,6 +32,11 @@
         .getElementById("create-progress-bar-with-appearing-button")
         .addEventListener("click", () => {
           window.native.createProgressBar("appearing-button");
+        });
+      document
+        .getElementById("create-progress-bar-with-disappearing-button")
+        .addEventListener("click", () => {
+          window.native.createProgressBar("disappearing-button");
         });
     </script>
   </body>

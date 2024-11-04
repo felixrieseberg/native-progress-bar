@@ -186,7 +186,7 @@ export class ProgressBar {
    * @returns {boolean} true if we need to update, false otherwise
    */
   private getButtonsUpdateNecessary(newButtons?: ProgressBarButtonArguments[]) {
-    if (!newButtons || newButtons.length === 0) {
+    if (!newButtons) {
       return false;
     }
 
