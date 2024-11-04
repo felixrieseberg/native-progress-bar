@@ -62,6 +62,9 @@ function createProgressBar(type) {
     case "disappearing-button":
       createProgressBarWithDisappearingButton();
       break;
+    case "multiple-buttons":
+      createProgressBarWithMultipleButtons();
+      break;
   }
 }
 
@@ -146,6 +149,28 @@ function createProgressBarWithDisappearingButton() {
 
     progressBar.progress += 1;
   }, 200);
+
+  PROGRESS_BARS.push(progressBar);
+}
+
+function createProgressBarWithMultipleButtons() {
+  let progressBar, interval;
+
+  progressBar = new ProgressBar({
+    title: "Hi!",
+    message: "Deleting all kinds of files!",
+    style: "default",
+    progress: 10,
+    buttons: [getDefaultCancelButton(), {
+      label: "Done",
+      click: (progressBar) => {
+        console.log("Done button clicked");
+        progressBar.close();
+      },
+    }],
+  });
+
+  interval = getDefaultInterval(progressBar);
 
   PROGRESS_BARS.push(progressBar);
 }
