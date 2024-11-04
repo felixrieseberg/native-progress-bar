@@ -67,7 +67,11 @@ static void FinalizeProgressBar(napi_env env, void* finalize_data, void* finaliz
     ProgressBarContext* context = static_cast<ProgressBarContext*>(finalize_data);
     if (context && context->isValid.exchange(false)) {
         if (context->handle) {
+#ifdef __APPLE__
             CloseProgressBarMacOS(context->handle);
+#elif defined(_WIN32)
+            CloseProgressBarWindows(context->handle);
+#endif
             context->handle = nullptr;
         }
         delete context;
@@ -78,7 +82,11 @@ static void CleanupProgressBars(void* arg) {
     std::lock_guard<std::mutex> lock(handles_mutex);
     for (void* handle : active_handles) {
         if (handle) {
+#ifdef __APPLE__
             CloseProgressBarMacOS(handle);
+#elif defined(_WIN32)
+            CloseProgressBarWindows(handle);
+#endif
         }
     }
     active_handles.clear();
@@ -272,6 +280,16 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
         updateButtons ? buttonLabelPtrs.size() : 0,
         updateButtons ? ButtonClickCallback : nullptr
     );
+#elif defined(_WIN32)
+    UpdateProgressBarWindows(
+        context->handle, 
+        progress, 
+        message,
+        updateButtons,
+        updateButtons ? buttonLabelPtrs.data() : nullptr,
+        updateButtons ? buttonLabelPtrs.size() : 0,
+        updateButtons ? ButtonClickCallback : nullptr
+    );
 #endif
 
     if (message) {
@@ -297,7 +315,11 @@ static napi_value CloseProgress(napi_env env, napi_callback_info info) {
 
     if (context && context->isValid.exchange(false)) {
         if (context->handle) {
+#ifdef __APPLE__
             CloseProgressBarMacOS(context->handle);
+#elif defined(_WIN32)
+            CloseProgressBarWindows(context->handle);
+#endif
             context->handle = nullptr;
         }
     }
@@ -311,7 +333,6 @@ NAPI_MODULE_INIT() {
 
     napi_add_env_cleanup_hook(env, CleanupProgressBars, nullptr);
 
-#ifdef __APPLE__
     napi_value show_fn, update_fn, close_fn;
     NAPI_CALL(env, napi_create_function(env, "showProgressBar", NAPI_AUTO_LENGTH, 
                                        ShowProgressBar, NULL, &show_fn));
@@ -322,6 +343,6 @@ NAPI_MODULE_INIT() {
     NAPI_CALL(env, napi_set_named_property(env, result, "showProgressBar", show_fn));
     NAPI_CALL(env, napi_set_named_property(env, result, "updateProgress", update_fn));
     NAPI_CALL(env, napi_set_named_property(env, result, "closeProgress", close_fn));
-#endif
+
     return result;
 }

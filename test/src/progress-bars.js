@@ -68,6 +68,8 @@ function createSimpleProgressBar() {
     },
   });
 
+  interval = getDefaultInterval(progressBar);
+
   PROGRESS_BARS.push(progressBar);
 }
 

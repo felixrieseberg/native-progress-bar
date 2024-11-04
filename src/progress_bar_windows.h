@@ -5,13 +5,24 @@
 extern "C" {
 #endif
 
-typedef void (*ButtonCallback)(int buttonIndex);
+void* ShowProgressBarWindows(
+    const char* title,
+    const char* message,
+    const char* style,
+    const char** buttonLabels,
+    size_t buttonCount,
+    void (*callback)(int)
+);
 
-void* ShowProgressBarWindows(const char* title, const char* message, const char* style,
-                           const char** buttonLabels, int buttonCount, ButtonCallback callback);
-
-void UpdateProgressBarWindows(void* handle, double progress, const char* message,
-                            bool updateButtons, const char** buttonLabels, int buttonCount, ButtonCallback callback);
+void UpdateProgressBarWindows(
+    void* handle,
+    int progress,
+    const char* message,
+    bool updateButtons,
+    const char** buttonLabels,
+    size_t buttonCount,
+    void (*callback)(int)
+);
 
 void CloseProgressBarWindows(void* handle);
 

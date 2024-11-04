@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build-ts && npm run build-native",
     "build-ts": "tsc",
-    "build-native": "node-gyp build",
+    "build-native": "node-gyp build-clean",
     "build-native-clean": "node-gyp clean && node-gyp configure && node-gyp build",
     "test": "cd test && npm run start && cd -",
     "prettier": "npx prettier --write ."
@@ -20,7 +20,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "nan": "^2.22.0"
+    "nan": "^2.22.0",
+    "bindings": "^1.5.0"
   },
   "devDependencies": {
     "@types/bindings": "^1.5.5",

@@ -29,7 +29,10 @@
               "ExceptionHandling": 1,
               "AdditionalOptions": ["/std:c++17"]
             }
-          }
+          },
+          "libraries": [
+            "Shcore.lib"
+          ]
         }]
       ]
     }
