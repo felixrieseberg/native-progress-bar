@@ -12,10 +12,20 @@ function getDefaultInterval(progressBar) {
 
     if (progressBar.progress >= 100) {
       clearInterval(interval);
+      
+      // You can dynamically change buttons
+      progressBar.buttons = [{
+        label: "Done",
+        click: (progressBar) => {
+          console.log("Done button clicked");
+          progressBar.close();
+        }
+      }]
+
       return;
     }
 
-    progressBar.progress += 1;
+    progressBar.progress += 5;
   }, 200);
 
   return interval;

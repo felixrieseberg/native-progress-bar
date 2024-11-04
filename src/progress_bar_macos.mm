@@ -317,11 +317,6 @@ void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
                     
                     [wrapper relayoutButtons];
                 }
-                
-                if (progress >= 100) {
-                    NSLog(@"Progress complete, closing window");
-                    CloseProgressBarMacOS(handle);
-                }
             });
         } @catch (NSException *exception) {
             NSLog(@"Exception in UpdateProgressBarMacOS: %@", exception);

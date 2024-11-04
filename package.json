@@ -7,8 +7,7 @@
   "scripts": {
     "build": "npm run build-ts && npm run build-native",
     "build-ts": "tsc",
-    "build-native": "node-gyp build-clean",
-    "build-native-clean": "node-gyp clean && node-gyp configure && node-gyp build",
+    "build-native": "node-gyp clean && node-gyp configure && node-gyp build",
     "test": "cd test && npm run start && cd -",
     "prettier": "npx prettier --write ."
   },
