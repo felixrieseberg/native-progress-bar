@@ -24,6 +24,8 @@
 
 #ifdef __APPLE__
 #include "progress_bar_macos.h"
+#elif defined(_WIN32)
+#include "progress_bar_windows.h"
 #endif
 
 struct ProgressBarContext {
@@ -157,7 +159,17 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
         buttonLabelPtrs.size(), 
         ButtonClickCallback
     );
+#elif defined(_WIN32)
+    context->handle = ShowProgressBarWindows(
+        title,
+        message,
+        style,
+        buttonLabelPtrs.data(),
+        buttonLabelPtrs.size(),
+        ButtonClickCallback
+    );
 #endif
+
     delete[] title;
     delete[] message;
     delete[] style;

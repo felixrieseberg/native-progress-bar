@@ -3,7 +3,7 @@
     {
       "target_name": "progress_bar",
       "include_dirs": ["<!(node -e \"require('nan')\")"],
-       "conditions": [
+      "conditions": [
         ['OS=="mac"', {
           "sources": [ 
             "src/progress_bar.cpp",
@@ -17,6 +17,18 @@
             "CLANG_ENABLE_OBJC_ARC": "YES",
             "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
             "GCC_ENABLE_CPP_RTTI": "YES"
+          }
+        }],
+        ['OS=="win"', {
+          "sources": [
+            "src/progress_bar.cpp",
+            "src/progress_bar_windows.cpp"
+          ],
+          "msvs_settings": {
+            "VCCLCompilerTool": {
+              "ExceptionHandling": 1,
+              "AdditionalOptions": ["/std:c++17"]
+            }
           }
         }]
       ]
