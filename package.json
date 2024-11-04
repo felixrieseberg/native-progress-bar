@@ -5,11 +5,12 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build-ts && npm run build-native",
     "build-ts": "tsc",
     "build-native": "node-gyp build",
-    "build-native-clean": "node-gyp clean && node-gyp configure && node-gyp build"
+    "build-native-clean": "node-gyp clean && node-gyp configure && node-gyp build",
+    "test": "cd test && npm run start && cd -",
+    "prettier": "npx prettier --write ."
   },
   "keywords": [],
   "author": {

@@ -23,9 +23,10 @@ typedef void (*ButtonCallback)(int buttonIndex);
 - (void)relayoutButtons;
 @end
 
-// Declare default heights
+// Declare default values
+#define DEFAULT_WIDTH 400
 #define DEFAULT_HEIGHT_WITHOUT_BUTTONS 100
-#define DEFAULT_ADDED_HEIGHT_WITH_BUTTONS 60
+#define DEFAULT_ADDED_HEIGHT_WITH_BUTTONS 40
 #define DEFAULT_HEIGHT_WITH_BUTTONS (DEFAULT_HEIGHT_WITHOUT_BUTTONS + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS)
 
 @implementation ProgressBarWrapper
@@ -71,40 +72,43 @@ typedef void (*ButtonCallback)(int buttonIndex);
     
     if (self.buttons.count == 0) {
         // Resize window to smaller height if no buttons
-        newHeight = DEFAULT_HEIGHT_WITHOUT_BUTTONS; // Base height without buttons
-        messageLabelY = 90; // Position from bottom
-        progressBarY = 60;  // Position from bottom
+        newHeight = DEFAULT_HEIGHT_WITHOUT_BUTTONS;
+        messageLabelY = newHeight - 40;
+        progressBarY = newHeight - 40; 
     } else {
         // Resize window to accommodate buttons
-        newHeight = DEFAULT_HEIGHT_WITH_BUTTONS; // Base height with buttons
-        messageLabelY = 90;// + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS; // Position from bottom
-        progressBarY = 60;// + DEFAULT_ADDED_HEIGHT_WITH_BUTTONS;  // Position from bottom
+        newHeight = DEFAULT_HEIGHT_WITH_BUTTONS;
+        messageLabelY = newHeight - 40;
+        progressBarY = newHeight - 40; 
     }
     
     // Update window frame
-    frame.size.height = newHeight;
+    // frame.size.height = newHeight;
     NSRect contentFrame = [[self.panel contentView] frame];
     contentFrame.size.height = newHeight;
     [[self.panel contentView] setFrame:contentFrame];
     [self.panel setFrame:frame display:YES animate:YES];
     
     // Update message label position
-    NSRect messageLabelFrame = self.messageLabel.frame;
-    messageLabelFrame.origin.y = messageLabelY;
-    [self.messageLabel setFrame:messageLabelFrame];
+    // NSRect messageLabelFrame = self.messageLabel.frame;
+    // messageLabelFrame.origin.y = messageLabelY;
+    // [self.messageLabel setFrame:messageLabelFrame];
     
     // Update progress bar position
-    NSRect progressBarFrame = self.progressBar.frame;
-    progressBarFrame.origin.y = progressBarY;
-    [self.progressBar setFrame:progressBarFrame];
+    // NSRect progressBarFrame = self.progressBar.frame;
+    // progressBarFrame.origin.y = progressBarY;
+    // [self.progressBar setFrame:progressBarFrame];
     
     if (self.buttons.count > 0) {
         // Reposition buttons
         CGFloat buttonWidth = 100;
         CGFloat buttonHeight = 30;
         CGFloat buttonSpacing = 10;
-        CGFloat startX = self.panel.frame.size.width - (buttonWidth + 20);
         CGFloat buttonY = 20;
+        
+        // Calculate total width needed for all buttons
+        CGFloat totalWidth = (buttonWidth * self.buttons.count) + (buttonSpacing * (self.buttons.count - 1));
+        CGFloat startX = self.panel.frame.size.width - 20 - buttonWidth;
         
         for (NSButton* button in self.buttons) {
             [button setFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
@@ -140,7 +144,7 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
         styleMask |= NSWindowStyleMaskUtilityWindow;
     }
     
-    double width = 400;
+    double width = DEFAULT_WIDTH;
     double height = (buttonCount > 0) ? DEFAULT_HEIGHT_WITH_BUTTONS : DEFAULT_HEIGHT_WITHOUT_BUTTONS;
 
     NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
@@ -158,7 +162,7 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     [panel setHidesOnDeactivate:NO];
     
     // Position message label at the top
-    NSTextField *messageLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, height - 40, 360, 20)];
+    NSTextField *messageLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, height - 40, DEFAULT_WIDTH - 40, 20)];
     [messageLabel setStringValue:[NSString stringWithUTF8String:message]];
     [messageLabel setBezeled:NO];
     [messageLabel setDrawsBackground:NO];
@@ -166,7 +170,7 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
     [messageLabel setSelectable:NO];
     
     // Position progress bar below message
-    NSProgressIndicator *progressBar = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(20, height - 70, 360, 20)];
+    NSProgressIndicator *progressBar = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(20, height - 70, DEFAULT_WIDTH - 40, 20)];
     [progressBar setIndeterminate:NO];
     [progressBar setMinValue:0.0];
     [progressBar setMaxValue:100.0];
@@ -213,8 +217,8 @@ void* ShowProgressBarMacOS(const char* title, const char* message, const char* s
 }
 
 extern "C" __attribute__((visibility("default")))
-void UpdateProgressBarMacOS(void* handle, double progress, const char* message, 
-                          const char** buttonLabels, int buttonCount, ButtonCallback callback) {
+void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
+                            bool updateButtons, const char** buttonLabels, int buttonCount, ButtonCallback callback) {
     
     if (handle == nullptr) {
         return;
@@ -245,20 +249,27 @@ void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
                 buttonCount = 0;
             }
             
-            // Create a local copy of the button data with explicit string copying
+            // Move button processing inside updateButtons check
             NSMutableArray* pendingButtons = [NSMutableArray array];
-            for (int i = 0; i < buttonCount; i++) {
-                if (buttonLabels[i] != nullptr) {
-                    // Create an explicit copy of the string
-                    const char* label = strdup(buttonLabels[i]);
-                    NSString* labelStr = [NSString stringWithUTF8String:label];
-                    free((void*)label);
-                    
-                    if (labelStr) {  // Ensure string conversion succeeded
-                        [pendingButtons addObject:@{
-                            @"label": labelStr,
-                            @"index": @(i)
-                        }];
+            if (updateButtons && buttonCount > 0) {
+                if (buttonLabels == nullptr) {
+                    NSLog(@"Button labels array is null but count is %d", buttonCount);
+                    buttonCount = 0;
+                } else {
+                    // Create the pending buttons array only if we're updating buttons
+                    for (int i = 0; i < buttonCount; i++) {
+                        if (buttonLabels[i] != nullptr) {
+                            const char* label = strdup(buttonLabels[i]);
+                            NSString* labelStr = [NSString stringWithUTF8String:label];
+                            free((void*)label);
+                            
+                            if (labelStr) {
+                                [pendingButtons addObject:@{
+                                    @"label": labelStr,
+                                    @"index": @(i)
+                                }];
+                            }
+                        }
                     }
                 }
             }
@@ -270,27 +281,39 @@ void UpdateProgressBarMacOS(void* handle, double progress, const char* message,
                     [wrapper.messageLabel setStringValue:messageStr];
                 }
                 
-                [wrapper clearButtons];
-                
-                if (pendingButtons.count > 0) {
-                    for (NSDictionary* buttonData in pendingButtons) {
-                        NSString* label = buttonData[@"label"];
-                        NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 30)];
-                        [button setTitle:label];
-                        [button setBezelStyle:NSBezelStyleRounded];
-                        [button setTarget:wrapper];
-                        [button setAction:@selector(buttonClicked:)];
-                        [[wrapper.panel contentView] addSubview:button];
-                        [wrapper.buttons addObject:button];
+                // Only update buttons if updateButtons is true
+                if (updateButtons) {
+                    [wrapper clearButtons];
+                    
+                    if (pendingButtons.count > 0) {
+                        CGFloat buttonWidth = 100;
+                        CGFloat buttonHeight = 30;
+                        CGFloat buttonSpacing = 10;
+                        CGFloat startX = wrapper.panel.frame.size.width - (buttonWidth + 20);
+                        CGFloat buttonY = 20;
                         
-                        ButtonInfo* info = [[ButtonInfo alloc] init];
-                        info.index = [buttonData[@"index"] intValue];
-                        info.callback = callback;
-                        [wrapper.buttonCallbacks addObject:info];
+                        for (NSDictionary* buttonData in pendingButtons) {
+                            NSString* label = buttonData[@"label"];
+                            // Create button with correct initial position
+                            NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(startX, buttonY, buttonWidth, buttonHeight)];
+                            [button setTitle:label];
+                            [button setBezelStyle:NSBezelStyleRounded];
+                            [button setTarget:wrapper];
+                            [button setAction:@selector(buttonClicked:)];
+                            [[wrapper.panel contentView] addSubview:button];
+                            [wrapper.buttons addObject:button];
+                            
+                            ButtonInfo* info = [[ButtonInfo alloc] init];
+                            info.index = [buttonData[@"index"] intValue];
+                            info.callback = callback;
+                            [wrapper.buttonCallbacks addObject:info];
+                            
+                            startX -= (buttonWidth + buttonSpacing);
+                        }
                     }
+                    
+                    [wrapper relayoutButtons];
                 }
-                
-                [wrapper relayoutButtons];
                 
                 if (progress >= 100) {
                     NSLog(@"Progress complete, closing window");

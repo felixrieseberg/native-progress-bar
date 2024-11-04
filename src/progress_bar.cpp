@@ -179,8 +179,8 @@ static napi_value ShowProgressBar(napi_env env, napi_callback_info info) {
 }
 
 static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
-    size_t argc = 4;
-    napi_value args[4];
+    size_t argc = 5;
+    napi_value args[5];
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));
     
     void* data;
@@ -203,21 +203,27 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
         NAPI_CALL(env, napi_get_value_string_utf8(env, args[2], message, message_size + 1, nullptr));
     }
 
+    // Get update buttons flag
+    bool updateButtons = false;
+    if (argc >= 4) {
+        NAPI_CALL(env, napi_get_value_bool(env, args[3], &updateButtons));
+    }
+
     // Handle buttons array
     std::vector<std::string> buttonLabels;
     std::vector<const char*> buttonLabelPtrs;
     
-    if (argc >= 4) {
+    if (argc >= 5 && updateButtons) {
         bool isArray;
-        NAPI_CALL(env, napi_is_array(env, args[3], &isArray));
+        NAPI_CALL(env, napi_is_array(env, args[4], &isArray));
         
         if (isArray) {
             uint32_t length;
-            NAPI_CALL(env, napi_get_array_length(env, args[3], &length));
+            NAPI_CALL(env, napi_get_array_length(env, args[4], &length));
             
             for (uint32_t i = 0; i < length; i++) {
                 napi_value buttonObj;
-                NAPI_CALL(env, napi_get_element(env, args[3], i, &buttonObj));
+                NAPI_CALL(env, napi_get_element(env, args[4], i, &buttonObj));
                 
                 // Get label
                 napi_value labelProp;
@@ -249,9 +255,10 @@ static napi_value UpdateProgress(napi_env env, napi_callback_info info) {
         context->handle, 
         progress, 
         message, 
-        buttonLabelPtrs.data(), 
-        buttonLabelPtrs.size(), 
-        ButtonClickCallback
+        updateButtons,
+        updateButtons ? buttonLabelPtrs.data() : nullptr,
+        updateButtons ? buttonLabelPtrs.size() : 0,
+        updateButtons ? ButtonClickCallback : nullptr
     );
 #endif
 
