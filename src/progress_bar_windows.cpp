@@ -6,9 +6,10 @@
 #include <string>
 #include "progress_bar_windows.h"
 
-#define DEFAULT_WINDOW_WIDTH 1035
-#define DEFAULT_WINDOW_HEIGHT 250
-#define DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS 360
+#define DEFAULT_WINDOW_WIDTH 500
+#define DEFAULT_WINDOW_HEIGHT 150
+#define DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS 200
+#define WINDOW_MARGIN 30
 
 // Add DPI awareness helper
 int GetWindowDpiHelper(HWND hwnd) {
@@ -93,11 +94,18 @@ void* ShowProgressBarWindows(
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     
-    // Calculate window dimensions
-    int windowWidth = DEFAULT_WINDOW_WIDTH;
-    int windowHeight = buttonCount == 0 ? DEFAULT_WINDOW_HEIGHT : DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS;  // Taller if we have buttons
+    // Get system DPI
+    HDC hdc = GetDC(NULL);
+    int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+    ReleaseDC(NULL, hdc);
     
-    // Calculate center position
+    // Calculate window dimensions with DPI scaling
+    int windowWidth = ScaleForDpi(DEFAULT_WINDOW_WIDTH, dpi);
+    int windowHeight = buttonCount == 0 ? 
+        ScaleForDpi(DEFAULT_WINDOW_HEIGHT, dpi) : 
+        ScaleForDpi(DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS, dpi);
+    
+    // Calculate center position with scaled dimensions
     int windowX = (screenWidth - windowWidth) / 2;
     int windowY = (screenHeight - windowHeight) / 2;
 
@@ -119,18 +127,23 @@ void* ShowProgressBarWindows(
         return nullptr;
     }
 
-    // Get DPI for the window
-    int dpi = GetWindowDpiHelper(hwnd);
+    // Update DPI to use the per-monitor value
+    dpi = GetWindowDpiHelper(hwnd);
 
-    // Create message text with DPI-aware font
+    // After window creation and getting DPI
+    RECT clientRect;
+    GetClientRect(hwnd, &clientRect);
+    int clientWidth = clientRect.right - clientRect.left;
+
+    // Create message text
     HWND hMessage = CreateWindowExW(
-        WS_EX_TRANSPARENT,  // Add transparent style to extended window style
+        WS_EX_TRANSPARENT,
         L"STATIC",
         wMessage.c_str(),
         WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
-        ScaleForDpi(30, dpi),
+        ScaleForDpi(WINDOW_MARGIN, dpi),
         ScaleForDpi(20, dpi),
-        ScaleForDpi(440, dpi),
+        clientWidth - ScaleForDpi(2 * WINDOW_MARGIN, dpi),  // Width based on client area
         ScaleForDpi(20, dpi),
         hwnd,
         NULL,
@@ -165,7 +178,7 @@ void* ShowProgressBarWindows(
         GetWindowLongW(hMessage, GWL_EXSTYLE) | WS_EX_TRANSPARENT);
 
     // Set text color and make background transparent
-    HDC hdc = GetDC(hMessage);
+    hdc = GetDC(hMessage);
     SetBkMode(hdc, TRANSPARENT);
     ReleaseDC(hMessage, hdc);
 
@@ -186,9 +199,9 @@ void* ShowProgressBarWindows(
         PROGRESS_CLASSW,
         NULL,
         WS_CHILD | WS_VISIBLE,
-        ScaleForDpi(30, dpi),
-        ScaleForDpi(50, dpi),  // Adjusted position to be below message
-        ScaleForDpi(440, dpi),
+        ScaleForDpi(WINDOW_MARGIN, dpi),
+        ScaleForDpi(50, dpi),
+        clientWidth - ScaleForDpi(2 * WINDOW_MARGIN, dpi),  // Width based on client area
         ScaleForDpi(24, dpi),
         hwnd,
         NULL,
@@ -206,7 +219,7 @@ void* ShowProgressBarWindows(
     int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
     
     // Start position for the first button (from right side)
-    int startX = ScaleForDpi(470, dpi) - totalButtonWidth;  // 470 is window width (500) minus margin (30)
+    int startX = clientWidth - ScaleForDpi(WINDOW_MARGIN, dpi) - totalButtonWidth;
 
     for (size_t i = 0; i < buttonCount; i++) {
         std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
@@ -252,6 +265,15 @@ void UpdateProgressBarWindows(
     if (!hwnd) return;
 
     int dpi = GetWindowDpiHelper(hwnd);
+    
+    // Get screen dimensions
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    // Get client area dimensions
+    RECT clientRect;
+    GetClientRect(hwnd, &clientRect);
+    int clientWidth = clientRect.right - clientRect.left;
 
     // Find the progress bar window
     HWND hProgress = FindWindowExW(hwnd, NULL, PROGRESS_CLASSW, NULL);
@@ -275,22 +297,15 @@ void UpdateProgressBarWindows(
             DestroyWindow(hButton);
         }
 
-        // Get screen dimensions for centering
-        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        // Calculate new window size with DPI scaling
+        int windowWidth = ScaleForDpi(DEFAULT_WINDOW_WIDTH, dpi);
+        int windowHeight = buttonCount == 0 ? 
+            ScaleForDpi(DEFAULT_WINDOW_HEIGHT, dpi) : 
+            ScaleForDpi(DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS, dpi);
         
-        // Calculate new window size
-        int windowWidth = DEFAULT_WINDOW_WIDTH;
-        int windowHeight = buttonCount == 0 ? DEFAULT_WINDOW_HEIGHT : DEFAULT_WINDOW_HEIGHT_WITH_BUTTONS;
-        
-        // Calculate new center position
+        // Calculate new center position with scaled dimensions
         int windowX = (screenWidth - windowWidth) / 2;
         int windowY = (screenHeight - windowHeight) / 2;
-
-        // Resize and reposition window
-        SetWindowPos(hwnd, NULL, 
-            windowX, windowY, windowWidth, windowHeight,
-            SWP_NOZORDER);
 
         if (buttonCount > 0) {
             // Create new buttons with DPI scaling
@@ -301,7 +316,7 @@ void UpdateProgressBarWindows(
 
             // Calculate total width needed for all buttons
             int totalButtonWidth = (buttonWidth * buttonCount) + (buttonSpacing * (buttonCount - 1));
-            int startX = ScaleForDpi(470, dpi) - totalButtonWidth;
+            int startX = clientWidth - ScaleForDpi(WINDOW_MARGIN, dpi) - totalButtonWidth;
 
             for (size_t i = 0; i < buttonCount; i++) {
                 std::wstring wButtonLabel(buttonLabels[i], buttonLabels[i] + strlen(buttonLabels[i]));
